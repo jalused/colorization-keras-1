@@ -41,26 +41,26 @@ opts["batch_size"] = 128
 opts["epoch"] = 3
 opts["train_flag"] = True
 
-train_x = train_x[6, :, :].reshape(1, train_x.shape[1], train_x.shape[2])
-train_y = train_y[6, :, :].reshape(1, train_y.shape[1], train_y.shape[2])
-
-y = train_x.reshape(256, 256)
-uv = train_y.reshape(2, 256, 256)
-u = uv[0, :, :]
-v = uv[1, :, :]
-
-[r, g, b] = yuv2rgb(y, u, v)
-ra = np.asarray(r)
-ga = np.asarray(g)
-ba = np.asarray(b)
-
-converted_rgb = np.zeros((256, 256, 3), dtype = 'uint8')
-converted_rgb[:, :, 0] = ra
-converted_rgb[:, :, 1] = ga
-converted_rgb[:, :, 2] = ba
-
-im = Image.fromarray(converted_rgb)
-im.show()
+#train_x = train_x[6, :, :].reshape(1, train_x.shape[1], train_x.shape[2])
+#train_y = train_y[6, :, :].reshape(1, train_y.shape[1], train_y.shape[2])
+#
+#y = train_x.reshape(256, 256)
+#uv = train_y.reshape(2, 256, 256)
+#u = uv[0, :, :]
+#v = uv[1, :, :]
+#
+#[r, g, b] = yuv2rgb(y, u, v)
+#ra = np.asarray(r)
+#ga = np.asarray(g)
+#ba = np.asarray(b)
+#
+#converted_rgb = np.zeros((256, 256, 3), dtype = 'uint8')
+#converted_rgb[:, :, 0] = ra
+#converted_rgb[:, :, 1] = ga
+#converted_rgb[:, :, 2] = ba
+#
+#im = Image.fromarray(converted_rgb)
+#im.show()
 
 pixel_model = Sequential()
 pixel_model.add(Flatten(input_shape=(opts["img_pixel_feature_patch_size"] * opts["img_pixel_feature_patch_size"], )))
@@ -76,34 +76,24 @@ texture_model.add(Convolution2D(64, 5, 5, border_mode = 'valid', activation = 'r
 texture_model.add(ZeroPadding2D(padding = (2, 2)))
 texture_model.add(Convolution2D(64, 5, 5, border_mode = 'valid', activation = 'relu'))
 texture_model.add(MaxPooling2D(pool_size = (3, 3), strides = ([2, 2])))
-#texture_model.add(ZeroPadding2D(padding = (2, 2)))
-#texture_model.add(Convolution2D(64, 5, 5, border_mode = 'valid', activation = 'relu'))
+texture_model.add(ZeroPadding2D(padding = (2, 2)))
+texture_model.add(Convolution2D(64, 5, 5, border_mode = 'valid', activation = 'relu'))
 texture_model.add(Flatten())
 texture_model.add(Dense(256, activation = 'relu'))
 texture_model.add(Dropout(0.5))
-#texture_model.add(Dense(128, W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
-texture_model.add(Dense(2 * opts["color_patch_size"] * opts["color_patch_size"], W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
-#texture_model.add(MaxPooling2D(pool_size=(2, 2)))
-#texture_model.add(Convolution2D(64, 3, 3, border_mode= 'valid', W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
-#texture_model.add(Activation('relu'))
-#texture_model.add(MaxPooling2D(pool_size=(2, 2)))
-#texture_model.add(Convolution2D(128, 3, 3, border_mode= 'valid', W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
-#texture_model.add(Activation('relu'))
-#texture_model.add(MaxPooling2D(pool_size=(2, 2)))
-#texture_model.add(Flatten())
 
 model = Sequential()
 model.add(Merge([pixel_model, texture_model], mode = "concat"))
-model.add(Dense(2 * opts["color_patch_size" * opts["color_patch_size"]], W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
-model.add(Activation("sigmoid"))
+model.add(Dense(8 * opts["color_patch_size" * opts["color_patch_size"]], W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
+model.add(Activation("relu"))
 model.add(Dense(2 * opts["color_patch_size"] * opts["color_patch_size"], W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
 model.add(Activation('sigmoid'))
 
 print("Compiling model")
 sgd = SGD(lr = 10e-4, momentum = 0.9, decay = 10e-4)
 #sgd = SGD()
-#model.compile(loss = 'mean_squared_error', optimizer = sgd)
-texture_model.compile(loss = 'mean_squared_error', optimizer = sgd)
+model.compile(loss = 'mean_squared_error', optimizer = 'sgd')
+#texture_model.compile(loss = 'mean_squared_error', optimizer = sgd)
 yaml_model = texture_model.to_yaml()
 open(model_path + model_file, "w").write(yaml_model)
 #deal with command line parameters
@@ -135,41 +125,19 @@ if (opts["train_flag"]):
     train_y_vector = train_y_patches.reshape(train_y_patches.shape[0], train_y_patches.size / train_y_patches.shape[0])
 
     print("Fitting")
-    #model.fit([train_x_vector, train_x_patches], train_y_vector, batch_size=opts["batch_size"], nb_epoch=opts["epoch"], show_accuracy=True, verbose=1)
-    #model.save_weights(param_path + param_file, overwrite=True)
-    texture_model.fit([train_x_patches], train_y_vector, batch_size=opts["batch_size"], nb_epoch=opts["epoch"], verbose=1)
-    texture_model.save_weights(param_path + param_file, overwrite=True)
+    
+    model.fit([train_x_vector, train_x_patches], train_y_vector, batch_size=opts["batch_size"], nb_epoch=opts["epoch"], show_accuracy=True, verbose=1)
+    model.save_weights(param_path + param_file, overwrite=True)
+    
+    #texture_model.fit([train_x_patches], train_y_vector, batch_size=opts["batch_size"], nb_epoch=opts["epoch"], verbose=1)
+    #texture_model.save_weights(param_path + param_file, overwrite=True)
 else:
     print("Load Weights")
-    #model.load_weights(param_path + param_file)
-    texture_model.load_weights(param_path + param_file)
+    model.load_weights(param_path + param_file)
+    #texture_model.load_weights(param_path + param_file)
 
-test_x = train_x[0, :, :].reshape(1, train_x.shape[1], train_x.shape[2])
-test_y = train_y[0, :, :].reshape(1, train_y.shape[1], train_y.shape[2])
-
-# test_x = test_x[0, :, :]
-# test_y = test_y[0, :, :]
-
-
-# y = test_x.reshape(256, 256)
-# uv = test_y.reshape(2, 256, 256)
-# u = uv[0, :, :]
-# v = uv[1, :, :]
-#
-# [r, g, b] = yuv2rgb(y, u, v)
-# ra = np.asarray(rm1)
-# ga = np.asarray(gm1)
-# ba = np.asarray(bm1)
-#
-# converted_rgb = np.zeros((256, 256, 3), dtype = 'uint8')
-# converted_rgb[:, :, 0] = ra
-# converted_rgb[:, :, 1] = ga
-# converted_rgb[:, :, 2] = ba
-#
-# im = Image.fromarray(converted_rgb)
-# im.show()
-test_x = test_x[0, :, :].reshape(1, test_x.shape[1], test_x.shape[2])
-test_y = test_y[0, :, :].reshape(1, test_y.shape[1], test_y.shape[2])
+test_x = test_x[0, :, :].reshape(1, train_x.shape[1], train_x.shape[2])
+test_y = test_y[0, :, :].reshape(1, train_y.shape[1], train_y.shape[2])
 
 print("Splitting test data")
 [test_x_patches, test_x_pixel_patches, test_y_patches] = split_test_data(test_x, test_y, opts)
@@ -192,10 +160,10 @@ for i in range(test_x_vector.shape[0]):
     temp[:, 1] = 0.5 * (temp[:, 1] + 1)
 
     #[score, acc] = model.evaluate([x_vector, x_patch], temp, show_accuracy=True, verbose = 1)
-    [score, acc] = texture_model.evaluate([x_patch], temp, show_accuracy=True, verbose = 1)
-    print("score: " + str(score) + ", acc: " + str(acc))
-    #predict_color = model.predict([x_vector, x_patch], verbose = 1)
-    predict_color = texture_model.predict([x_patch], verbose = 1)
+    #[score, acc] = texture_model.evaluate([x_patch], temp, show_accuracy=True, verbose = 1)
+    #print("score: " + str(score) + ", acc: " + str(acc))
+    predict_color = model.predict([x_vector, x_patch], verbose = 1)
+    #predict_color = texture_model.predict([x_patch], verbose = 1)
     predict_color = predict_color.transpose().reshape(2, np.sqrt(predict_color.shape[0]), np.sqrt(predict_color.shape[0]))
 
     print(str(np.sqrt(x_vector.shape[0])))
@@ -208,23 +176,6 @@ for i in range(test_x_vector.shape[0]):
     original_yuv[0, :, :] = y
     result_yuv[0, :, :] = y
     original_yuv[1 : 3, :, :] = y_vector.transpose().reshape(2, im_size, im_size)
-    # yyy = test_y.reshape(2, 256, 256)
-    # uv = y_vector.transpose().reshape(2, im_size, im_size
-    # [r, g, b] = yuv2rgb(original_yuv[0, :, :], original_yuv[1, :, :], original_yuv[2, :, :])
-    # rm1 = np.uint8(r * 255)
-    # gm1 = np.uint8(g * 255)
-    # bm1 = np.uint8(b * 255)
-    # ra = np.asarray(rm1)
-    # ga = np.asarray(gm1)
-    # ba = np.asarray(bm1)
-    #
-    # converted_rgb = np.zeros((222, 222, 3), dtype = 'uint8')
-    # converted_rgb[:, :, 0] = ra
-    # converted_rgb[:, :, 1] = ga
-    # converted_rgb[:, :, 2] = ba
-    #
-    # im = Image.fromarray(converted_rgb)
-    # im.show()
     original_image[i, :, :, :] = original_yuv
     result_yuv[1 : 3, :, :] = predict_color
     result_yuv[1, :, :] = 2 * result_yuv[1, :, :] - 1
