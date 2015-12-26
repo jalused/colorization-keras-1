@@ -7,7 +7,7 @@ import numpy as np
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout, Activation, Flatten, Merge
 from keras.layers.convolutional import Convolution2D, MaxPooling2D, ZeroPadding2D
-from keras.optimizers import sgd, SGD
+from keras.optimizers import sgd, SGD, RMSprop
 from keras.utils import np_utils
 from keras.regularizers import l2
 
@@ -91,8 +91,9 @@ model.add(Activation('sigmoid'))
 
 print("Compiling model")
 sgd = SGD(lr = 10e-4, momentum = 0.9, decay = 10e-4)
+rms = RMSprop()
 #sgd = SGD()
-model.compile(loss = 'mean_squared_error', optimizer = 'sgd')
+model.compile(loss = 'mean_squared_error', optimizer = rms)
 #texture_model.compile(loss = 'mean_squared_error', optimizer = sgd)
 yaml_model = texture_model.to_yaml()
 open(model_path + model_file, "w").write(yaml_model)
