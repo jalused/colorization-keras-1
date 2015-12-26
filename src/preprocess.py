@@ -5,8 +5,8 @@ import sys
 import numpy as np
 from util import rgb2yuv
 from util import yuv2rgb
-resized_image_path = '/home/jiangliang/datasets/flickr8k/flicker_image/flicker8k_resized_image/';
-yuv_image_path = '/home/jiangliang/code/colorization-keras/data/yuv_image/';
+resized_image_path = '/home/curio/datasets/flickr8k/flicker_image/flicker8k_resized_image/';
+yuv_image_path = '/home/curio/code/colorization-keras/data/yuv_image/';
 
 try:
     output = subprocess.check_output('ls ' + resized_image_path, shell = True);

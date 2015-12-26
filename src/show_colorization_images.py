@@ -3,7 +3,7 @@ import numpy as np
 from PIL import Image
 from util import yuv2rgb
 
-result_path = "/home/jiangliang/code/colorization-keras-1/result/"
+result_path = "../result/"
 result_file = "result.npz"
 
 images = np.load(result_path + result_file)
