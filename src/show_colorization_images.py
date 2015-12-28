@@ -5,7 +5,6 @@ from util import yuv2rgb
 
 result_path = "../result/"
 result_file = "result.npz"
-
 images = np.load(result_path + result_file)
 
 original_images = images["original_images"]
@@ -21,19 +20,27 @@ for i in range(original_images.shape[0]):
     or_im = original_images[i, :, :, :]
     re_im = result_images[i, :, :, :]
 
-    [or_y, or_u, or_v] = yuv2rgb(np.asmatrix(or_im[0, :, :]), np.asmatrix(or_im[1, :, :]), np.asmatrix(or_im[2, :, :]))
-    [re_y, re_u, re_v] = yuv2rgb(np.asmatrix(re_im[0, :, :]), np.asmatrix(re_im[1, :, :]), np.asmatrix(re_im[2, :, :]))
+    ory = or_im[0, :, :]
+    oru = or_im[1, :, :]
+    orv = or_im[2, :, :]
+
+    rey = re_im[0, :, :]
+    reu = re_im[1, :, :]
+    rev = re_im[2, :, :]
+
+    [or_y, or_u, or_v] = yuv2rgb(or_im[0, :, :], or_im[1, :, :], or_im[2, :, :])
+    [re_y, re_u, re_v] = yuv2rgb(re_im[0, :, :], re_im[1, :, :], re_im[2, :, :])
 
     original_image = np.zeros((or_y.shape[0], or_y.shape[1], 3), dtype = "uint8")
     result_image = np.zeros((re_y.shape[0], re_y.shape[1], 3), dtype = "uint8")
 
-    original_image[:, :, 0] = np.asarray(or_y)
-    original_image[:, :, 1] = np.asarray(or_u)
-    original_image[:, :, 2] = np.asarray(or_v)
+    original_image[:, :, 0] = or_y
+    original_image[:, :, 1] = or_u
+    original_image[:, :, 2] = or_v
 
-    result_image[:, :, 0] = np.asarray(re_y)
-    result_image[:, :, 1] = np.asarray(re_u)
-    result_image[:, :, 2] = np.asarray(re_v)
+    result_image[:, :, 0] = re_y
+    result_image[:, :, 1] = re_u
+    result_image[:, :, 2] = re_v
 
     original_image = Image.fromarray(original_image)
     result_image = Image.fromarray(result_image)
