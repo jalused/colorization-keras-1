@@ -34,11 +34,11 @@ test_y = data["test_y"]
 
 opts = {}
 opts["img_patch_size"] = 45
-opts["img_pixel_feature_patch_size"] = 3
-opts["num_patches"] = 65536
+opts["img_pixel_feature_patch_size"] = 7
+opts["num_patches"] = 131072
 opts["color_patch_size"] = 1
 opts["batch_size"] = 128
-opts["epoch"] = 3
+opts["epoch"] = 10
 opts["train_flag"] = True
 
 #train_x = train_x[6, :, :].reshape(1, train_x.shape[1], train_x.shape[2])
@@ -79,21 +79,23 @@ texture_model.add(MaxPooling2D(pool_size = (3, 3), strides = ([2, 2])))
 texture_model.add(ZeroPadding2D(padding = (2, 2)))
 texture_model.add(Convolution2D(64, 5, 5, border_mode = 'valid', activation = 'relu'))
 texture_model.add(Flatten())
-texture_model.add(Dense(256, activation = 'relu'))
-texture_model.add(Dropout(0.5))
 
 model = Sequential()
 model.add(Merge([pixel_model, texture_model], mode = "concat"))
+model.add(Dense(1024, activation = 'relu'))
+model.add(Dense(512, activation = 'relu'))
+model.add(Dense(128, activation = 'relu'))
 model.add(Dense(8 * opts["color_patch_size" * opts["color_patch_size"]], W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
 model.add(Activation("relu"))
+model.add(Dropout(0.5))
 model.add(Dense(2 * opts["color_patch_size"] * opts["color_patch_size"], W_regularizer = l2(0.01), b_regularizer = l2(0.01)))
-model.add(Activation('sigmoid'))
 
 print("Compiling model")
 sgd = SGD(lr = 10e-4, momentum = 0.9, decay = 10e-4)
 rms = RMSprop()
+
 #sgd = SGD()
-model.compile(loss = 'mean_squared_error', optimizer = rms)
+model.compile(loss = 'mean_squared_error', optimizer = sgd)
 #texture_model.compile(loss = 'mean_squared_error', optimizer = sgd)
 yaml_model = texture_model.to_yaml()
 open(model_path + model_file, "w").write(yaml_model)
@@ -137,8 +139,8 @@ else:
     model.load_weights(param_path + param_file)
     #texture_model.load_weights(param_path + param_file)
 
-test_x = test_x[0, :, :].reshape(1, train_x.shape[1], train_x.shape[2])
-test_y = test_y[0, :, :].reshape(1, train_y.shape[1], train_y.shape[2])
+test_x = test_x[2, :, :].reshape(1, train_x.shape[1], train_x.shape[2])
+test_y = test_y[2, :, :].reshape(1, train_y.shape[1], train_y.shape[2])
 
 print("Splitting test data")
 [test_x_patches, test_x_pixel_patches, test_y_patches] = split_test_data(test_x, test_y, opts)
@@ -160,9 +162,9 @@ for i in range(test_x_vector.shape[0]):
     temp[:, 0] = 0.5 * (temp[:, 0] + 1)
     temp[:, 1] = 0.5 * (temp[:, 1] + 1)
 
-    #[score, acc] = model.evaluate([x_vector, x_patch], temp, show_accuracy=True, verbose = 1)
+    [score, acc] = model.evaluate([x_vector, x_patch], temp, show_accuracy=True, verbose = 1)
     #[score, acc] = texture_model.evaluate([x_patch], temp, show_accuracy=True, verbose = 1)
-    #print("score: " + str(score) + ", acc: " + str(acc))
+    print("score: " + str(score) + ", acc: " + str(acc))
     predict_color = model.predict([x_vector, x_patch], verbose = 1)
     #predict_color = texture_model.predict([x_patch], verbose = 1)
     predict_color = predict_color.transpose().reshape(2, np.sqrt(predict_color.shape[0]), np.sqrt(predict_color.shape[0]))
